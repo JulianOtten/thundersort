@@ -65,15 +65,18 @@ class Document {
     public static saveOptions() {
         browser.storage.sync.set({
             autoSort: document.querySelector<HTMLFormElement>('#auto-sort')!.checked,
+            onSender: document.querySelector<HTMLFormElement>('#sender')!.checked,
             rules: Document.getRules()
         });
     }
 
     public static async restoreOptions() {
         const autoSort: boolean = (await browser.storage.sync.get('autoSort'))['autoSort'] as boolean;
+        const onSender: boolean = (await browser.storage.sync.get('onSender'))['onSender'] as boolean;
         const rules = await Rules.get();
 
         document.querySelector<HTMLFormElement>('#auto-sort')!.checked = autoSort ?? false;
+        document.querySelector<HTMLFormElement>('#sender')!.checked = onSender ?? false;
 
         for (const { expression, output } of rules) {
             Document.addRule(expression, output);
