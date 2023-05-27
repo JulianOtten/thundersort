@@ -10,6 +10,7 @@ import { FolderPaneOnClickData, MessageListOnClickData } from './types/onClickDa
 declare const browser: Browser;
 
 let autoSort: boolean = (await browser.storage.sync.get('autoSort'))['autoSort'] as boolean;
+let onSender: boolean = (await browser.storage.sync.get('onSender'))['onSender'] as boolean;
 
 console.log('Config: Loaded initial', { autoSort });
 
@@ -21,6 +22,12 @@ browser.storage.onChanged.addListener((changes, area) => {
         console.log(`Config: Changed autoSort to ${changes.autoSort.newValue}`);
 
         autoSort = changes.autoSort.newValue as boolean;
+    }
+
+    if ('onSender' in changes) {
+        console.log(`Config: Changed onSender to ${changes.onSender.newValue}`);
+
+        onSender = changes.onSender.newValue as boolean;
     }
 });
 
@@ -72,9 +79,29 @@ const getRecipients = async (message: MessageHeader): Promise<Array<string> | un
         .filter(unique);
 };
 
+/**
+ * Extract recipient candidates from as many headers as possible
+ */
+const getSender = async (message: MessageHeader): Promise<Array<string> | undefined> => {
+    const headers = (await browser.messages.getFull(message.id)).headers;
+
+    const sender: Array<string> = [
+        message.author,
+    ];
+
+    if (sender.length > 0) return sender
+        .map(stripOuterAngleBrackets)
+        .map(stripNameWithAngleBrackets)
+        .filter(unique);
+};
+
 const sortMessage = async (inbox: MailFolder, message: MessageHeader): Promise<void> => {
     // The address the message got sent to
-    const recipients: Array<string> | undefined = await getRecipients(message);
+    let recipients: Array<string> | undefined = await getRecipients(message);
+
+    if(onSender) {
+        recipients = await getSender(message);
+    }
 
     if (!recipients) {
         console.log('Sort: Message does not have recipient :(');
